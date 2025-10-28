@@ -1,0 +1,31 @@
+{
+  "name": "natura-dashboard-web",
+  "version": "1.0.0",
+  "description": "A web-based application to manage clients and orders with a dashboard for analytics.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "ag-grid-community": "^34.3.0",
+    "bootstrap": "^5.3.8",
+    "dotenv": "^8.2.0",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.2",
+    "inquirer": "^7.3.3",
+    "mongoose": "^8.19.1",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  },
+  "keywords": [
+    "nodejs",
+    "mongodb",
+    "express"
+  ],
+  "author": "Hector Rosas",
+  "license": "MIT"
+}

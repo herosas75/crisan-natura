@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Hector Rosas, © 2025 crisanexperiencianatura. All rights reserved.">
+    <link rel="stylesheet" href="./../public/css/natura.css">
+    <title>crisanexperiencianatura</title>
+
+    <!-- Favicon natura.png) -->
+    <link rel="icon" href="/resources/natura.png" type="image/jpeg">
+
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+</head>
+
+<body>
+    <header class="natura-header" role="banner">
+        <div class="natura-logo">
+            <img src="/resources/Natura.jpg" alt="Natura logo">
+        </div>
+
+        <nav class="natura-nav" role="navigation" aria-label="Principal">
+            <ul>
+                <li><a data-bs-toggle="offcanvas" href="#Cliente" role="button" aria-controls="offcanvasCliente">
+                        Clientes
+                    </a>
+                </li>
+                <li><a data-bs-toggle="offcanvas" href="#Pedido" role="button" aria-controls="offcanvasPedidos">
+                        Pedidos
+                    </a>
+                </li>
+                <li>
+                    <a id="Ventas"role="button" aria-controls="offcanvasVentas" onclick="myFunction()"> 
+                        Ventas
+                    </a> 
+                </li>
+            </ul>
+        </nav>
+    </header>
+    <div>
+        <%- include('clientes_grid') %>
+    </div>
+
+
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="Cliente" aria-labelledby="offcanvasLabel"
+        data-bs-backdrop="static">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="offcanvasLabel">Nuevo Cliente</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div>
+                <%- include('cliente') %>
+            </div>
+        </div>
+    </div>
+
+    <div class="offcanvas offcanvas-start" data-bs-backdrop="static" tabindex="-1" id="Pedido"
+        aria-labelledby="offcanvasLabel" style="width: 100vh;">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="offcanvasLabel">Añadir Pedido</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div>
+                <%- include('pedido') %>
+            </div>
+        </div>
+    </div>
+
+    <!--script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script-->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+ 
+    <script>
+        function myFunction() {
+            const modalId = 'graphModal';
+            let modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.style.position = 'fixed';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.background = 'rgba(0,0,0,0.7)';
+            modal.style.backdropFilter = 'blur(4px)';
+
+            modal.innerHTML = `
+                  <div style="background:#fff; border-radius:8px; width:900px; max-width:95%; max-height:90%; overflow:hidden; display:flex; flex-direction:column;">
+                    <div style="padding:10px 16px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
+                      <button id="closeClienteDetails" class= cancel-btn style="align:right;">Cerrar</button>
+                    </div>
+                                        
+                    <div style="display: flex;" overflow:auto;>
+                        <div style="flex: 1; margin-right: 5px;">
+                            <canvas id="clienteChart" width="40" height="20"></canvas>
+                        </div>
+                        <div style="flex: 1;">
+                            <canvas id="productoChart"></canvas>
+                        </div>
+                    </div>
+                    <div style="display: flex; overflow:auto;">
+                        <div style="flex; margin-left: 25px;">
+                            <canvas id="ventasChart" width="160" height="80"></canvas>
+                        </div>
+                    </div>
+                  </div>
+                `;
+            document.body.appendChild(modal);
+            document.getElementById('myGrid').style.display = 'none';
+
+            const closeModal = () => {
+                document.getElementById('myGrid').style.display = 'block';
+                modal.remove()
+            };
+
+            modal.querySelector('#closeClienteDetails').addEventListener('click', closeModal);
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+            //chart rendering code
+
+            var canvasCliente = document.getElementById("clienteChart");
+            var ctxC = canvasCliente.getContext("2d");
+
+            var canvasProducto = document.getElementById("productoChart");
+            var ctxP = canvasProducto.getContext("2d");
+
+            var canvasVentas = document.getElementById("ventasChart");
+            var ctxV = canvasVentas.getContext("2d");
+
+            fetch('/pedidos')
+                .then(response => response.json())
+                .then(data => {
+                    // Process data to get counts for each response category
+                    const pedidos = Array.isArray(data) ? data : (Array.isArray(data.pedidos) ? data.pedidos : []);
+                    const totalsByCliente = new Map();
+                    const totalsByProducts = new Map();
+                    const totalsByYear = new Map();
+
+                    pedidos.forEach(p => {
+                        // Determine cliente label
+                        let cliente = p.cliente ?? p.clienteName ?? (p.cliente_obj && (p.cliente_obj.nombre || p.cliente_obj.name)) ?? 'Desconocido';
+                        if (typeof cliente === 'object') cliente = cliente.nombre || cliente.name || JSON.stringify(cliente);
+
+                        const total = parseFloat(p.total) || 0;
+                        totalsByCliente.set(cliente, (totalsByCliente.get(cliente) || 0) + total);
+
+                        // Determine producto label
+                        let producto = p.producto ?? p.productoName ?? (p.producto && (p.productoj.nombre || p.producto_obj.name)) ?? 'Desconocido';
+                        if (typeof producto === 'object') producto = producto.nombre || producto.name || JSON.stringify(producto);
+
+                        const totalP = parseFloat(p.total) || 0;
+                        totalsByProducts.set(producto, (totalsByProducts.get(producto) || 0) + totalP);
+
+                        // Determine TotalYearly label
+                        let year = p.year ?? p.yearName ?? (p.year && (p.yearj.nombre || p.year_obj.name)) ?? 'Desconocido';
+                        if (typeof year === 'object') year = year.nombre || year.name || JSON.stringify(year);
+
+                        const totalY = parseFloat(p.total) || 0;
+                        totalsByYear.set(year, (totalsByYear.get(year) || 0) + totalY);
+                    });
+
+                    // Convert to arrays and sort by total descending
+                    const items = Array.from(totalsByCliente.entries()).sort((a, b) => b[1] - a[1]);
+                    const labels = items.map(i => i[0]);
+                    const values = items.map(i => i[1]);
+
+                    // Generate simple colors
+                    const backgroundColor = labels.map((_, i) => `hsl(${(i * 57) % 360}, 65%, 55%)`);
+
+                    // Update chart (clientChart is created later in the surrounding code, so it will exist by the time this runs)
+                    if (typeof clientChart !== 'undefined' && clientChart) {
+                        clientChart.data.labels = labels;
+                        clientChart.data.datasets[0].data = values;
+                        clientChart.data.datasets[0].backgroundColor = backgroundColor;
+                        clientChart.update();
+                    }
+
+                    // Convert to arrays and sort by total descending
+                    const itemsP = Array.from(totalsByProducts.entries()).sort((a, b) => b[1] - a[1]);
+                    const labelsP = itemsP.map(i => i[0]);
+                    const valuesP = itemsP.map(i => i[1]);
+
+                    // Generate simple colors
+                    const backgroundColorP = labels.map((_, i) => `hsl(${(i * 57) % 360}, 65%, 55%)`);
+
+                    // Update chart (productChart is created later in the surrounding code, so it will exist by the time this runs)
+                    if (typeof productoChart !== 'undefined' && productoChart) {
+                        productoChart.data.labels = labelsP;
+                        productoChart.data.datasets[0].data = valuesP;
+                        productoChart.data.datasets[0].backgroundColor = backgroundColorP;
+                        productoChart.update();
+                    }
+
+                    // Convert to arrays and sort by total descending
+                    const itemsY = Array.from(totalsByYear.entries()).sort((a, b) => b[1] - a[1]);
+                    const labelsY = itemsY.map(i => i[0]);
+                    const valuesY = itemsY.map(i => i[1]);
+
+                    // Generate simple colors
+                    const backgroundColorY = labels.map((_, i) => `hsl(${(i * 57) % 360}, 65%, 55%)`);
+
+                    // Update chart (productChart is created later in the surrounding code, so it will exist by the time this runs)
+                    if (typeof ventasChart !== 'undefined' && ventasChart) {
+                        ventasChart.data.labels = labelsY;
+                        ventasChart.data.datasets[0].data = valuesY;
+                        ventasChart.data.datasets[0].backgroundColor = backgroundColorY;
+                        ventasChart.update();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pedidos data:', error);
+                });
+
+              var clientChart = new Chart(ctxC, {
+                type: 'bar',
+                data: {
+                    labels: ['None'],
+                    datasets: [{ label: "", data: ['None'], hoverOffset: 4 }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true } // Start the y-axis at 0 
+                    },
+                    plugins: {
+                        title: {
+                            display: true, 
+                            align: 'center',
+                            text: 'Total de Ventas por Cliente'
+                        },
+                        legend: {
+                            display: false
+                        },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            //formatter: Math.round,
+                            font: {
+                                weight: 'bold'
+                            },
+                        }
+                    },
+                }
+              });
+
+              var productoChart = new Chart(ctxP, {
+                type: 'bar',
+                data: {
+                    labels: ['None'],
+                    datasets: [{ label: "", data: ['None'], hoverOffset: 4 }]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true } // Start the y-axis at 0 
+                    },
+                    plugins: {
+                        title: {
+                            display: true, 
+                            align: 'center',
+                            text: 'Total por Productos'
+                        },
+                        legend: {
+                            display: false
+                        },
+                    }
+                }
+              });
+
+              var ventasChart = new Chart(ctxV, {
+                type: 'doughnut',
+                data: {
+                    labels: ['None'],
+                    datasets: [{ label: "", data: ['None'], hoverOffset: 4 }]
+                },
+                options: {
+                    plugins: {
+                        title: {
+                            display: true, 
+                            align: 'center',
+                            text: 'Total de Ventas por Año'
+                        },
+                        legend: {
+                            display: false
+                        },
+                    }
+                }
+              });
+        }
+    </script>
+    
+
+
+    <!-- Bootstrap JS CDN (optional, for components requiring JS) -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+        integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.min.js"
+        integrity="sha384-G/EV+4j2dNv+tEPo3++6LCgdCROaejBqfUeNjuKAiuXbjrxilcCdDz6ZAVfHWe1Y"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>

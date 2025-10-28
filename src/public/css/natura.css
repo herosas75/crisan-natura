@@ -1,0 +1,189 @@
+:root {
+    --orange-1: #fff3e6;
+    --orange-2: #ffe0bf;
+    --orange-3: #ffd199;
+    --text: #3b2f2a;
+    --muted: rgba(59, 47, 42, 0.6);
+    --accent: #ff9f4a;
+    --cancel: #6c6c6c;
+}
+
+.natura-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 12px 20px;
+    background: linear-gradient(90deg, var(--orange-1) 0%, var(--orange-2) 50%, var(--orange-3) 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* Logo */
+.natura-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.natura-logo img {
+    height: 44px;
+    width: auto;
+    display: block;
+}
+
+/* Navigation */
+.natura-nav {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex: 1 1 auto;
+    margin-left: 10px;
+}
+
+.natura-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 16px;
+}
+
+.natura-nav a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: background .12s, color .12s, transform .08s;
+}
+
+.natura-nav a:hover {
+    background: rgba(255, 159, 74, 0.12);
+    color: #2b1f18;
+    transform: translateY(-1px);
+}
+
+/* Search */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+.search-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 6px 8px;
+    border-radius: 999px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.search-form input[type="search"] {
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 6px 8px;
+    width: 180px;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.search-form input[type="search"]::placeholder {
+    color: var(--muted);
+}
+
+.search-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    padding: 8px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.cancel-btn {
+    background: var(--cancel);
+    border: none;
+    color: white;
+    padding: 8px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.search-btn:active {
+    transform: translateY(1px);
+}
+
+/* Footer matching header gradient, text aligned to the very right */
+.natura-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    background: linear-gradient(90deg, var(--orange-1) 0%, var(--orange-2) 50%, var(--orange-3) 100%);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.natura-footer-inner {
+    width: 100%;
+    max-width: 1200px;
+    /* match your layout width if you have one */
+    display: flex;
+    justify-content: flex-end;
+    /* ensure text is at the very right edge of the inner container */
+}
+
+.natura-footer span {
+    opacity: 0.95;
+    padding-left: 8px;
+}
+
+/* Small screens */
+@media (max-width: 720px) {
+    .natura-header {
+        flex-wrap: wrap;
+        padding: 12px;
+    }
+
+    .natura-nav {
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
+    }
+
+    .natura-nav ul {
+        gap: 12px;
+    }
+
+    .search-form input[type="search"] {
+        width: 120px;
+    }
+
+    .natura-footer {
+        justify-content: center;
+    }
+
+    .natura-footer-inner {
+        justify-content: center;
+        padding: 8px;
+    }
+
+}

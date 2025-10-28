@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="author" content="Hector Rosas, © 2025 crisanexperiencianatura. All rights reserved." />
+  <link rel="stylesheet" href="./../public/css/natura.css" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- AG Grid Community Edition JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.2.0/dist/ag-grid-community.min.js"></script>
+  <!-- Charts.js -->
+  <!--script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script-->
+
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+</head>
+
+<body>
+  <div id="myGrid" style="height: 420px"></div>
+  <script type="text/javascript">
+    const currencyFormatter = (params) => {
+      if (params.value === null || params.value === undefined) {
+        return '';
+      }
+      return new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+      }).format(params.value);
+    };
+
+    const telephoneFormatter = (params) => {
+      if (params.value === null || params.value === undefined) {
+        return '';
+      }
+      // Format as (XXX) XXX-XXXX
+      const phone = params.value.replace(/\D/g, '');
+      if (phone.length === 10) {
+        return `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}`;
+      }
+      return params.value; // return original if not 10 digits
+    };
+
+    const dateformatter = (params) => {
+      if (params.value === null || params.value === undefined) {
+        return '';
+      }
+      const date = new Date(params.value);
+      return date.toLocaleDateString('es-MX');
+    };
+
+    const columnDefs = [
+      { field: "id", hide: true },
+      { field: "nombre", filter: true, filterParams: { buttons: ['reset'] }, width: 300 },
+      { field: "email", width: 250 },
+      { field: "telefono", width: 150, valueFormatter: telephoneFormatter },
+      { field: "totalOrderAmount", headerName: "Total Compras", width: 150, valueFormatter: currencyFormatter },
+      { field: "lastOrderDate", headerName: "Ultima Compra", sortable: true, sort: 'desc', width: 150, valueFormatter: dateformatter },
+    ];
+
+    let gridApi;
+
+    const myTheme = agGrid.themeBalham.withParams({
+      headerTextColor: 'black',
+      headerBackgroundColor: 'orange',
+      headerColumnBorderHeight: '0%',
+    });
+
+    const gridOptions = {
+      columnDefs: columnDefs,
+      //theme: agGrid.themeBalham.withPart(agGrid.colorSchemeLightCold),
+      theme: myTheme,
+      //pagination: true,
+      rowSelection: { mode: 'singleRow', checkboxes: false },
+
+      onCellDoubleClicked: params => {
+
+        if (params.colDef.field === 'nombre') {
+          // create or reuse modal element
+          const modalId = 'clienteEditModal';
+          let modal = document.getElementById(modalId);
+          if (modal) modal.remove(); // remove previous instance
+
+          modal = document.createElement('div');
+          modal.id = modalId;
+          modal.style.position = 'fixed';
+          modal.style.left = '0';
+          modal.style.top = '0';
+          modal.style.width = '100%';
+          modal.style.height = '100%';
+          modal.style.display = 'flex';
+          modal.style.alignItems = 'center';
+          modal.style.justifyContent = 'center';
+          modal.style.background = 'rgba(0,0,0,0.4)';
+          modal.style.backdropFilter = 'blur(4px)';
+
+          modal.innerHTML = `
+            <div style="background:#fff; border-radius:6px; width:480px; max-width:95%; padding:20px; box-shadow:0 6px 18px rgba(0,0,0,0.2);">
+              <h5 style="margin:0 0 12px 0;">Editar cliente</h5>
+              <form id="clienteEditForm">
+              
+              <input type="hidden" name="_id" value="${params.data._id}" />
+
+              <div class="mb-3">
+                <label class="form-label">Nombre</label>
+                <input name="nombre" type="text" disabled class="form-control" value="${(params.data.nombre || '').replace(/"/g, '&quot;')}" />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input name="email" type="email" class="form-control" value="${(params.data.email || '').replace(/"/g, '&quot;')}" />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Telefono</label>
+                <input name="telefono" type="tel" class="form-control" value="${(params.data.telefono || '').replace(/"/g, '&quot;')}" />
+              </div>
+
+              <div style="text-align:right;">
+                <button type="button" id="cancelEditCliente" class="cancel-btn">Cancelar</button>
+                <button type="submit" id="saveEditCliente" class="search-btn">Guardar</button>
+              </div>
+              </form>
+            </div>
+            `;
+          document.body.appendChild(modal);
+          document.getElementById('myGrid').style.display = 'none';
+
+          // helper to close and remove modal
+          const closeModal = () => {
+            document.getElementById('myGrid').style.display = 'block';
+            modal.remove();
+          };
+
+          // cancel button
+          modal.querySelector('#cancelEditCliente').addEventListener('click', closeModal);
+
+          // submit handler
+          modal.querySelector('#clienteEditForm').addEventListener('submit', (ev) => {
+            ev.preventDefault();
+
+            const form = ev.target;
+            const formData = {
+              _id: form._id.value,
+              nombre: form.nombre.value.trim(),
+              email: form.email.value.trim(),
+              telefono: form.telefono.value.trim(),
+            };
+
+            // send update to server
+            fetch(`/cliente/edit/${encodeURIComponent(formData._id)}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(formData)
+            })
+              .then(res => {
+                if (!res.ok) throw new Error('Error updating cliente');
+                return res.json();
+              })
+              .then((updated) => {
+                // refresh grid rows from server (keeps it simple and in sync)
+                fetch('/clientes')
+                  .then(r => r.json())
+                  .then((data) => { gridApi.setGridOption("rowData", data); });
+                closeModal();
+              })
+              .catch(err => {
+                console.error(err);
+                alert('No se pudo actualizar el cliente.');
+              });
+          });
+
+          // allow closing modal by clicking outside dialog
+          modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+          });
+        }
+        else if (params.colDef.field === 'totalOrderAmount') {
+          {
+            // open a new modal with an embedded AG Grid showing detailed rows (from test.ejs endpoint)
+            const modalId = 'clienteDetailsModal';
+            let modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.style.position = 'fixed';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.background = 'rgba(0,0,0,0.7)';
+            modal.style.backdropFilter = 'blur(4px)';
+
+            modal.innerHTML = `
+              <div style="background:#fff; border-radius:8px; width:900px; max-width:95%; max-height:90%; overflow:hidden; display:flex; flex-direction:column;">
+                <div style="padding:10px 16px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
+                  <strong>Pedidos de: ${(params.data.nombre || '').replace(/"/g, '&quot;')}</strong>
+                  <button id="closeClienteDetails" class= cancel-btn style="align:right;">Cerrar</button>
+                </div>
+                                    
+                <div style="padding:12px; flex:1 1 auto; overflow:auto;">
+                  <div id="childGrid" class="ag-theme-alpine" style="height:420px; width:100%;"></div>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('myGrid').style.display = 'none';
+
+            const closeModal = () => {
+              document.getElementById('myGrid').style.display = 'block';
+              modal.remove()
+            };
+
+            modal.querySelector('#closeClienteDetails').addEventListener('click', closeModal);
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+            // child grid configuration
+            const childColumnDefs = [
+              { field: "year", headerName: "Año", width: 80 }, //sortable: true, sort: 'desc' },
+              { field: "ciclo", filter: true, filterParams: { buttons: ['reset'] }, width: 80 },
+              { field: "cantidad", width: 80 },
+              { field: "producto", filter: true, filterParams: { buttons: ['reset'] }, width: 300 },
+              { field: "precio", width: 80, valueFormatter: currencyFormatter },
+              { field: "total", width: 80, valueFormatter: currencyFormatter },
+              { field: "createdAt", headerName: "Ultima Compra", sortable: true, sort: 'desc', width: 150, valueFormatter: dateformatter },
+
+            ];
+
+            const childGridOptions = {
+              columnDefs: childColumnDefs,
+              theme: agGrid.themeBalham.withPart(agGrid.colorSchemeLightCold),
+              pagination: true,
+              rowSelection: { mode: 'singleRow', checkboxes: false },
+              //defaultColDef: { resizable: true, sortable: true, filter: true },
+            };
+
+            // create grid
+            const childGridDiv = modal.querySelector('#childGrid');
+            const childGridApi = agGrid.createGrid(childGridDiv, childGridOptions);
+
+            // helper to set data on grid (compatible with either API location)
+            const setChildRowData = (rows) => {
+              if (childGridApi && typeof childGridApi.setRowData === 'function') {
+                childGridApi.setRowData(rows);
+              } else if (childGridOptions.api && typeof childGridOptions.api.setRowData === 'function') {
+                childGridOptions.api.setRowData(rows);
+              } else if (childGridOptions.api && childGridOptions.api.applyTransaction) {
+                childGridOptions.api.applyTransaction({ add: rows });
+              }
+            };
+
+            // fetch data for this cliente; adjust endpoint if your test.ejs provides a different route
+            fetch(`/pedidos/pedidos-by-cliente/${encodeURIComponent(params.data.nombre || '')}`)
+              .then(res => {
+                if (!res.ok) throw new Error('Error fetching details');
+                return res.json();
+              })
+              .then((rows) => {
+                // optional: compute subtotal if rows have cantidad & precio
+                setChildRowData(rows);
+                childGridApi.setGridOption("rowData", rows);
+              })
+              .catch(err => {
+                console.error(err);
+                setChildRowData([]); // show empty grid
+                const warn = document.createElement('div');
+                warn.style.color = '#a00';
+                warn.style.marginTop = '8px';
+                warn.textContent = 'No se pudieron cargar los pedidos.';
+                modal.querySelector('.ag-theme-alpine').insertAdjacentElement('afterend', warn);
+              });
+          }
+        }
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const gridDiv = document.querySelector("#myGrid");
+      gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+      fetch('/clientes')
+        .then(response => response.json())
+        .then((data) => { gridApi.setGridOption("rowData", data); })
+    });
+  </script>
+</body>
+
+<footer class="natura-footer" role="contentinfo">
+  <div class="natura-footer-inner">
+    <span>© 2025 crisanexperiencianatura. All rights reserved</span>
+  </div>
+</footer>
+
+</html>
