@@ -14,6 +14,41 @@ class OrdersController {
         return await Order.find({ cliente: clienteId });
     }
 
+    async getProductosByName(productoName) {
+        const searchTerm = productoName;
+        const pipeline = [
+            {
+                $search: {
+                    index: "producto", // Name of your Atlas Search index
+                    autocomplete: {
+                        query: searchTerm,
+                        path: "producto", // Fields to search within
+                    },
+                    //text: {
+                    //    query: searchTerm,
+                    //    path: ["cliente", "producto", "createdAt"] // Fields to search within
+                    //}
+
+                }
+            },
+            {
+                $sort: {
+                    cliente: 1,
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    cliente: 1,
+                    producto: 1,
+                    createdAt: 1
+                }
+            },
+        ];
+
+        return await Order.aggregate(pipeline);
+    }
+
     async getTotalbyCliente(clienteId) {
         const result = await Order.aggregate([
             { $match: { cliente: clienteId } },

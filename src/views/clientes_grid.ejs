@@ -10,14 +10,13 @@
   <!-- AG Grid Community Edition JavaScript -->
   <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@34.2.0/dist/ag-grid-community.min.js"></script>
   <!-- Charts.js -->
-  <!--script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script-->
-
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 </head>
 
 <body>
   <div id="myGrid" style="height: 420px"></div>
   <script type="text/javascript">
+
     const currencyFormatter = (params) => {
       if (params.value === null || params.value === undefined) {
         return '';
@@ -52,6 +51,7 @@
     const columnDefs = [
       { field: "id", hide: true },
       { field: "nombre", filter: true, filterParams: { buttons: ['reset'] }, width: 300 },
+      { field: "direccion", width: 250 },
       { field: "email", width: 250 },
       { field: "telefono", width: 150, valueFormatter: telephoneFormatter },
       { field: "totalOrderAmount", headerName: "Total Compras", width: 150, valueFormatter: currencyFormatter },
@@ -70,7 +70,7 @@
       columnDefs: columnDefs,
       //theme: agGrid.themeBalham.withPart(agGrid.colorSchemeLightCold),
       theme: myTheme,
-      //pagination: true,
+      pagination: true,
       rowSelection: { mode: 'singleRow', checkboxes: false },
 
       onCellDoubleClicked: params => {
@@ -104,6 +104,11 @@
               <div class="mb-3">
                 <label class="form-label">Nombre</label>
                 <input name="nombre" type="text" disabled class="form-control" value="${(params.data.nombre || '').replace(/"/g, '&quot;')}" />
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Direccion</label>
+                <input name="direccion" type="text" class="form-control" value="${(params.data.direccion || '').replace(/"/g, '&quot;')}" />
               </div>
 
               <div class="mb-3">
@@ -143,6 +148,7 @@
             const formData = {
               _id: form._id.value,
               nombre: form.nombre.value.trim(),
+              direccion: form.direccion.value.trim(),
               email: form.email.value.trim(),
               telefono: form.telefono.value.trim(),
             };

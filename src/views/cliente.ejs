@@ -8,6 +8,11 @@
         </div>
 
         <div class="mb-3">
+            <label for="direccion" class="form-label">Dirección</label>
+            <input type="text" class="form-control" id="direccion" name="direccion" />
+        </div>
+
+        <div class="mb-3">
             <label for="email" class="form-label">Correo electrónico</label>
             <input type="email" class="form-control" id="email" name="email" />
         </div>
@@ -18,7 +23,8 @@
         </div>
 
         <div class="text-center">
-            <button id="submitBtn" class="search-btn" data-bs-dismiss="offcanvas">Submit</button>
+            <!--button id="submitBtn" class="search-btn" data-bs-dismiss="offcanvas">Submit</button-->
+            <button id="submitBtn" class="search-btn">Submit</button>
         </div>
     </form>
 </div>
@@ -33,6 +39,7 @@
         const alertPlaceholder = document.getElementById("alertPlaceholder");
 
         const clienteOffcanvasEl = document.getElementById("clienteOffcanvas");
+        //const clienteOffcanvasEl = document.getElementById("Cliente");
         const clienteOffcanvas = clienteOffcanvasEl ? bootstrap.Offcanvas.getOrCreateInstance(clienteOffcanvasEl) : null;
 
         // Safe alert function
@@ -58,6 +65,7 @@
 
             const payload = {
                 nombre: form.nombre.value.trim(),
+                direccion: form.direccion.value.trim(),
                 email: form.email.value.trim(),
                 telefono: form.telefono.value.trim(),
             };
@@ -79,18 +87,15 @@
                     showAlert("success", json.message || "Cliente registrado correctamente.");
                     form.reset();
 
+                    // close offcanvas only after success <todo>
+
                     // refresh grid rows from server (keeps it simple and in sync)
                     fetch('/clientes')
                         .then(r => r.json())
-                        .then((data) => { 
-                            gridApi.setGridOption("rowData", data); 
-                        });
-                    // the page's code sets rowData via setGridOption previously, reuse same method
-                    if (gridApi && typeof gridApi.setGridOption === 'function') {
-                        gridApi.setGridOption("rowData", data);
-                    } else if (gridOptions.api && typeof gridOptions.api.setRowData === 'function') {
-                        gridOptions.api.setRowData(data);
-                    }
+                        .then((data) => {
+                            gridApi.setGridOption("rowData", data);
+                        })
+                        .catch(() => { /* ignore refresh errors */ });
                 } else {
                     showAlert("danger", json.error || json.message || "Error al registrar cliente.");
                     form.reset();
