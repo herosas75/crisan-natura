@@ -11,7 +11,7 @@ const controllerCliente = new ClientesController();
 const controllerOrder = new OrdersController();
 const controllerInventario = new InventarioController();
 
-const app =  express();
+const app = express();
 
 // Middleware
 app.use(morgan('dev'));
@@ -69,13 +69,13 @@ app.put('/cliente/edit/:id', async (req, res) => {
 
 app.delete('/cliente/delete/:id', async (req, res) => {
     try {
-        const { id } = req.params;  
+        const { id } = req.params;
         await controllerCliente.delete(id);
         res.status(200).json({ message: 'Cliente eliminado' });
     } catch (error) {
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
-});      
+});
 
 // Order Routes
 app.get('/pedido'), async (req, res) => {
@@ -85,6 +85,16 @@ app.get('/pedido'), async (req, res) => {
 app.get('/pedidos', async (req, res) => {
     try {
         const pedidos = await controllerOrder.getOrders();
+        res.status(200).json(pedidos);
+    } catch (error) {
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+});
+
+app.get('/buscar/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const pedidos = await controllerOrder.getProductosByName(id);
         res.status(200).json(pedidos);
     } catch (error) {
         res.status(500).json({ error: error.message || 'Internal Server Error' });

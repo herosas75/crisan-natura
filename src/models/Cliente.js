@@ -6,6 +6,10 @@ const clienteSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
+    direccion: {
+        type: String,
+        required: false,
+    },
     email: {
         type: String,
         required: false,

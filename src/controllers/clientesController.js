@@ -55,6 +55,7 @@ class ClientesController {
                     nombre: 1,
                     email: 1,
                     telefono: 1,
+                    direccion: 1,
                     totalOrderAmount: "$orderStats.totalOrderAmount",
                     lastOrderDate: "$orderStats.lastOrderDate"
                 }

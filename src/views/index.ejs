@@ -33,12 +33,17 @@
                     </a>
                 </li>
                 <li>
-                    <a id="Ventas"role="button" aria-controls="offcanvasVentas" onclick="myFunction()"> 
+                    <a id="Ventas" role="button" aria-controls="offcanvasVentas" onclick="myFunction()">
                         Ventas
-                    </a> 
+                    </a>
                 </li>
             </ul>
         </nav>
+        <div class="header-actions">
+            <input type="search" class="search-form" id="searchInput" placeholder="producto...">
+            <button type="submit" class="search-btn" id="searchBtn">Buscar</button>
+        </div>
+        <div id="searchAlert"></div>
     </header>
     <div>
         <%- include('clientes_grid') %>
@@ -71,10 +76,9 @@
         </div>
     </div>
 
-    <!--script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.js"></script-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
- 
+
     <script>
         function myFunction() {
             const modalId = 'graphModal';
@@ -221,7 +225,7 @@
                     console.error('Error fetching pedidos data:', error);
                 });
 
-              var clientChart = new Chart(ctxC, {
+            var clientChart = new Chart(ctxC, {
                 type: 'bar',
                 data: {
                     labels: ['None'],
@@ -233,7 +237,7 @@
                     },
                     plugins: {
                         title: {
-                            display: true, 
+                            display: true,
                             align: 'center',
                             text: 'Total de Ventas por Cliente'
                         },
@@ -250,9 +254,9 @@
                         }
                     },
                 }
-              });
+            });
 
-              var productoChart = new Chart(ctxP, {
+            var productoChart = new Chart(ctxP, {
                 type: 'bar',
                 data: {
                     labels: ['None'],
@@ -264,7 +268,7 @@
                     },
                     plugins: {
                         title: {
-                            display: true, 
+                            display: true,
                             align: 'center',
                             text: 'Total por Productos'
                         },
@@ -273,9 +277,9 @@
                         },
                     }
                 }
-              });
+            });
 
-              var ventasChart = new Chart(ctxV, {
+            var ventasChart = new Chart(ctxV, {
                 type: 'doughnut',
                 data: {
                     labels: ['None'],
@@ -284,7 +288,7 @@
                 options: {
                     plugins: {
                         title: {
-                            display: true, 
+                            display: true,
                             align: 'center',
                             text: 'Total de Ventas por Año'
                         },
@@ -293,10 +297,125 @@
                         },
                     }
                 }
-              });
+            });
+
         }
     </script>
-    
+
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const searchAlert = document.getElementById('searchAlert');
+        let gridApiP;
+
+        function showSearchAlert(type, msg) {
+            searchAlert.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${msg}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>`;
+            setTimeout(() => { searchAlert.innerHTML = ''; }, 3500);
+        }
+
+        function createOrUpdateGrid(rows) {
+
+            // open a new modal with an embedded AG Grid showing detailed rows (from test.ejs endpoint)
+            const modalId = 'searchModal';
+            let modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.style.position = 'fixed';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.background = 'rgba(0,0,0,0.7)';
+            modal.style.backdropFilter = 'blur(4px)';
+
+            modal.innerHTML = `
+              <div style="background:#fff; border-radius:8px; width:900px; max-width:95%; max-height:90%; overflow:hidden; display:flex; flex-direction:column;">
+                <div style="padding:10px 16px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
+                  <button id="closeSearchDetails" class= cancel-btn style="align:right;">Cerrar</button>
+                </div>
+                                    
+                <div style="padding:12px; flex:1 1 auto; overflow:auto;">
+                  <div id="searchdGrid" class="ag-theme-alpine" style="height:420px; width:100%;"></div>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(modal);
+            document.getElementById('myGrid').style.display = 'none';
+
+            const closeModal = () => {
+                document.getElementById('myGrid').style.display = 'block';
+                modal.remove()
+            };
+
+            modal.querySelector('#closeSearchDetails').addEventListener('click', closeModal);
+            modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+
+            const dateformatter = (params) => {
+                if (params.value === null || params.value === undefined) {
+                    return '';
+                }
+                const date = new Date(params.value);
+                return date.toLocaleDateString('es-MX');
+            };
+
+            // build columnDefs from keys of first row
+            const childColumnDefs = [
+                { field: "cliente", filter: true, filterParams: { buttons: ['reset'] }, width: 300 },
+                { field: "producto", width: 250 },
+                { field: "createdAt", headerName: "Ultima Compra", sortable: true, sort: 'desc', width: 150, valueFormatter: dateformatter },
+            ];
+
+            const childGridOptions = {
+                columnDefs: childColumnDefs,
+                theme: agGrid.themeBalham.withPart(agGrid.colorSchemeLightCold),
+                pagination: true,
+                rowSelection: { mode: 'singleRow', checkboxes: false },
+            }
+
+            // create grid
+            const childGridDiv = modal.querySelector('#searchdGrid');
+            const childGridApi = agGrid.createGrid(childGridDiv, childGridOptions);
+            childGridApi.setGridOption("rowData", rows);
+        }
+
+        async function performSearch(query) {
+            if (!query) {
+                showSearchAlert('warning', 'Ingrese término de búsqueda.');
+                return;
+            }
+
+            try {
+                const res = await fetch('/buscar/' + encodeURIComponent(query));
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.error || err.message || 'Error en búsqueda');
+                }
+                const data = await res.json();
+                createOrUpdateGrid(data);
+            } catch (err) {
+                showSearchAlert('danger', err.message || 'Error de red');
+            }
+        }
+        // wire events
+        searchBtn.addEventListener('click', () => performSearch(searchInput.value.trim()));
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                performSearch(searchInput.value.trim());
+            }
+        });
+
+    </script>
+
 
 
     <!-- Bootstrap JS CDN (optional, for components requiring JS) -->
