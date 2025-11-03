@@ -99,26 +99,30 @@
             modal.style.backdropFilter = 'blur(4px)';
 
             modal.innerHTML = `
-                  <div style="background:#fff; border-radius:8px; width:900px; max-width:95%; max-height:90%; overflow:hidden; display:flex; flex-direction:column;">
-                    <div style="padding:10px 16px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
-                      <button id="closeClienteDetails" class= cancel-btn style="align:right;">Cerrar</button>
-                    </div>
-                                        
-                    <div style="display: flex;" overflow:auto;>
-                        <div style="flex: 1; margin-right: 5px;">
-                            <canvas id="clienteChart" width="40" height="20"></canvas>
-                        </div>
-                        <div style="flex: 1;">
-                            <canvas id="productoChart"></canvas>
-                        </div>
-                    </div>
-                    <div style="display: flex; overflow:auto;">
-                        <div style="flex; margin-left: 25px;">
-                            <canvas id="ventasChart" width="160" height="80"></canvas>
-                        </div>
-                    </div>
-                  </div>
-                `;
+        <div style="background:#fff; border-radius:8px; width:1900px; max-width:95%; max-height:95%; overflow:hidden; display:flex; flex-direction:column;">
+            <div style="padding:10px 16px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                    <label for="yearSelect"><strong>Filtrar por año:</strong></label>
+                    <select id="yearSelect" style="padding:5px 10px; border-radius:4px; margin-left:8px;"></select>
+                </div>
+                <button id="closeClienteDetails" class="cancel-btn">Cerrar</button>
+            </div>
+                                
+            <div style="display: flex;" overflow:auto;>
+                <div style="flex: 1; margin-right: 5px;">
+                    <canvas id="clienteChart" width="40" height="20"></canvas>
+                </div>
+                <div style="flex: 1;">
+                    <canvas id="productoChart"></canvas>
+                </div>
+            </div>
+            <div style="display: flex; overflow:auto;">
+                <div style="flex; margin-left: 25px;">
+                    <canvas id="ventasChart" width="360" height="380"></canvas>
+                </div>
+            </div>
+        </div>
+    `;
             document.body.appendChild(modal);
             document.getElementById('myGrid').style.display = 'none';
 
@@ -126,179 +130,150 @@
                 document.getElementById('myGrid').style.display = 'block';
                 modal.remove()
             };
-
             modal.querySelector('#closeClienteDetails').addEventListener('click', closeModal);
             modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 
-            //chart rendering code
+            // --- CHART INITIALIZATION ---
+            const ctxC = document.getElementById("clienteChart").getContext("2d");
+            const ctxP = document.getElementById("productoChart").getContext("2d");
+            const ctxV = document.getElementById("ventasChart").getContext("2d");
 
-            var canvasCliente = document.getElementById("clienteChart");
-            var ctxC = canvasCliente.getContext("2d");
+            const clientChart = new Chart(ctxC, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: "", data: [] }] },
+                options: {
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        title: { display: true, text: 'Total $ por Cliente (Top 12)' },
+                        legend: { display: false }
+                    }
+                }
+            });
 
-            var canvasProducto = document.getElementById("productoChart");
-            var ctxP = canvasProducto.getContext("2d");
+            const productoChart = new Chart(ctxP, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: "", data: [] }] },
+                options: {
+                    scales: { y: { beginAtZero: true } },
+                    plugins: {
+                        title: { display: true, text: 'Total $ por Producto (Top 10)' },
+                        legend: { display: false }
+                    }
+                }
+            });
 
-            var canvasVentas = document.getElementById("ventasChart");
-            var ctxV = canvasVentas.getContext("2d");
+            const ventasChart = new Chart(ctxV, {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ label: "", data: [] }] },
+                options: {
+                    plugins: {
+                        title: { display: true, text: 'Total de Ventas por Año' },
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // --- DATA FETCH + DROPDOWN POPULATION ---
+            let allPedidos = [];
 
             fetch('/pedidos')
                 .then(response => response.json())
                 .then(data => {
-                    // Process data to get counts for each response category
-                    const pedidos = Array.isArray(data) ? data : (Array.isArray(data.pedidos) ? data.pedidos : []);
-                    const totalsByCliente = new Map();
-                    const totalsByProducts = new Map();
-                    const totalsByYear = new Map();
-
-                    pedidos.forEach(p => {
-                        // Determine cliente label
-                        let cliente = p.cliente ?? p.clienteName ?? (p.cliente_obj && (p.cliente_obj.nombre || p.cliente_obj.name)) ?? 'Desconocido';
-                        if (typeof cliente === 'object') cliente = cliente.nombre || cliente.name || JSON.stringify(cliente);
-
-                        const total = parseFloat(p.total) || 0;
-                        totalsByCliente.set(cliente, (totalsByCliente.get(cliente) || 0) + total);
-
-                        // Determine producto label
-                        let producto = p.producto ?? p.productoName ?? (p.producto && (p.productoj.nombre || p.producto_obj.name)) ?? 'Desconocido';
-                        if (typeof producto === 'object') producto = producto.nombre || producto.name || JSON.stringify(producto);
-
-                        const totalP = parseFloat(p.total) || 0;
-                        totalsByProducts.set(producto, (totalsByProducts.get(producto) || 0) + totalP);
-
-                        // Determine TotalYearly label
-                        let year = p.year ?? p.yearName ?? (p.year && (p.yearj.nombre || p.year_obj.name)) ?? 'Desconocido';
-                        if (typeof year === 'object') year = year.nombre || year.name || JSON.stringify(year);
-
-                        const totalY = parseFloat(p.total) || 0;
-                        totalsByYear.set(year, (totalsByYear.get(year) || 0) + totalY);
-                    });
-
-                    // Convert to arrays and sort by total descending
-                    const items = Array.from(totalsByCliente.entries()).sort((a, b) => b[1] - a[1]);
-                    const labels = items.map(i => i[0]);
-                    const values = items.map(i => i[1]);
-
-                    // Generate simple colors
-                    const backgroundColor = labels.map((_, i) => `hsl(${(i * 57) % 360}, 65%, 55%)`);
-
-                    // Update chart (clientChart is created later in the surrounding code, so it will exist by the time this runs)
-                    if (typeof clientChart !== 'undefined' && clientChart) {
-                        clientChart.data.labels = labels;
-                        clientChart.data.datasets[0].data = values;
-                        clientChart.data.datasets[0].backgroundColor = backgroundColor;
-                        clientChart.update();
-                    }
-
-                    // Convert to arrays and sort by total descending
-                    const itemsP = Array.from(totalsByProducts.entries()).sort((a, b) => b[1] - a[1]);
-                    const labelsP = itemsP.map(i => i[0]);
-                    const valuesP = itemsP.map(i => i[1]);
-
-                    // Generate simple colors
-                    const backgroundColorP = labels.map((_, i) => `hsl(${(i * 57) % 360}, 65%, 55%)`);
-
-                    // Update chart (productChart is created later in the surrounding code, so it will exist by the time this runs)
-                    if (typeof productoChart !== 'undefined' && productoChart) {
-                        productoChart.data.labels = labelsP;
-                        productoChart.data.datasets[0].data = valuesP;
-                        productoChart.data.datasets[0].backgroundColor = backgroundColorP;
-                        productoChart.update();
-                    }
-
-                    // Convert to arrays and sort by total descending
-                    const itemsY = Array.from(totalsByYear.entries()).sort((a, b) => b[1] - a[1]);
-                    const labelsY = itemsY.map(i => i[0]);
-                    const valuesY = itemsY.map(i => i[1]);
-
-                    // Generate simple colors
-                    const backgroundColorY = labels.map((_, i) => `hsl(${(i * 57) % 360}, 65%, 55%)`);
-
-                    // Update chart (productChart is created later in the surrounding code, so it will exist by the time this runs)
-                    if (typeof ventasChart !== 'undefined' && ventasChart) {
-                        ventasChart.data.labels = labelsY;
-                        ventasChart.data.datasets[0].data = valuesY;
-                        ventasChart.data.datasets[0].backgroundColor = backgroundColorY;
-                        ventasChart.update();
-                    }
+                    allPedidos = Array.isArray(data) ? data : (data.pedidos ?? []);
+                    const mostRecentYear = populateYearDropdown(allPedidos);
+                    updateCharts(mostRecentYear); // Load most recent year initially
                 })
-                .catch(error => {
-                    console.error('Error fetching pedidos data:', error);
+                .catch(error => console.error('Error fetching pedidos data:', error));
+
+            // --- Populate dropdown with years ---
+            function populateYearDropdown(pedidos) {
+                const select = document.getElementById("yearSelect");
+                const years = new Set();
+
+                pedidos.forEach(p => {
+                    const fecha = p.createdAt;
+                    if (fecha) {
+                        const year = new Date(fecha).getFullYear();
+                        if (!isNaN(year)) years.add(year);
+                    }
                 });
 
-            var clientChart = new Chart(ctxC, {
-                type: 'bar',
-                data: {
-                    labels: ['None'],
-                    datasets: [{ label: "", data: ['None'], hoverOffset: 4 }]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true } // Start the y-axis at 0 
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            align: 'center',
-                            text: 'Total de Ventas por Cliente'
-                        },
-                        legend: {
-                            display: false
-                        },
-                        datalabels: {
-                            anchor: 'end',
-                            align: 'top',
-                            //formatter: Math.round,
-                            font: {
-                                weight: 'bold'
-                            },
-                        }
-                    },
-                }
-            });
+                const sortedYears = Array.from(years).sort((a, b) => b - a);
+                const mostRecentYear = sortedYears[0];
 
-            var productoChart = new Chart(ctxP, {
-                type: 'bar',
-                data: {
-                    labels: ['None'],
-                    datasets: [{ label: "", data: ['None'], hoverOffset: 4 }]
-                },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true } // Start the y-axis at 0 
-                    },
-                    plugins: {
-                        title: {
-                            display: true,
-                            align: 'center',
-                            text: 'Total por Productos'
-                        },
-                        legend: {
-                            display: false
-                        },
-                    }
-                }
-            });
+                select.innerHTML = `<option value="All">Todos</option>` +
+                    sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
 
-            var ventasChart = new Chart(ctxV, {
-                type: 'doughnut',
-                data: {
-                    labels: ['None'],
-                    datasets: [{ label: "", data: ['None'], hoverOffset: 4 }]
-                },
-                options: {
-                    plugins: {
-                        title: {
-                            display: true,
-                            align: 'center',
-                            text: 'Total de Ventas por Año'
-                        },
-                        legend: {
-                            display: false
-                        },
-                    }
-                }
-            });
+                // Set default to the most recent year
+                select.value = mostRecentYear;
 
+                select.addEventListener('change', () => updateCharts(select.value));
+                return mostRecentYear;
+            }
+
+            // --- Function to refresh charts based on selected year ---
+            function updateCharts(selectedYear = "All") {
+                const pedidos = selectedYear === "All"
+                    ? allPedidos
+                    : allPedidos.filter(p => {
+                        const fecha = p.createdAt;
+                        const year = fecha ? new Date(fecha).getFullYear() : null;
+                        return year == selectedYear;
+                    });
+
+                const totalsByCliente = new Map();
+                const totalsByProducts = new Map();
+                const totalsByYear = new Map();
+
+                pedidos.forEach(p => {
+                    const total = parseFloat(p.total) || 0;
+
+                    // Cliente
+                    let cliente = p.cliente ?? p.clienteName ?? (p.cliente_obj && (p.cliente_obj.nombre || p.cliente_obj.name)) ?? 'Desconocido';
+                    if (typeof cliente === 'object') cliente = cliente.nombre || cliente.name || JSON.stringify(cliente);
+                    totalsByCliente.set(cliente, (totalsByCliente.get(cliente) || 0) + total);
+
+                    // Producto
+                    let producto = p.producto ?? p.productoName ?? (p.producto && (p.producto.nombre || p.producto.name)) ?? 'Desconocido';
+                    if (typeof producto === 'object') producto = producto.nombre || producto.name || JSON.stringify(producto);
+                    totalsByProducts.set(producto, (totalsByProducts.get(producto) || 0) + total);
+
+                    // Año
+                    const fecha = p.createdAt;
+                    const year = fecha ? new Date(fecha).getFullYear() : 'Desconocido';
+                    totalsByYear.set(year, (totalsByYear.get(year) || 0) + total);
+                });
+
+                // Update Cliente chart
+                const clientes = Array.from(totalsByCliente.entries()).sort((a, b) => b[1] - a[1]);
+                clientChart.data.labels = clientes.slice(0, 12).map(i => i[0]);
+                clientChart.data.datasets[0].data = clientes.slice(0, 12).map(i => i[1]);
+                clientChart.data.datasets[0].backgroundColor = clientes.map((_, i) => `hsl(${i * 40 % 360},70%,55%)`);
+                clientChart.update();
+
+                // Update Producto chart
+                const productos = Array.from(totalsByProducts.entries()).sort((a, b) => b[1] - a[1]);
+                productoChart.data.labels = productos.slice(0, 10).map(i => i[0]);
+                productoChart.data.datasets[0].data = productos.slice(0, 10).map(i => i[1]);
+                productoChart.data.datasets[0].backgroundColor = productos.map((_, i) => `hsl(${i * 40 % 360},70%,55%)`);
+                productoChart.update();
+
+                // Update Ventas chart
+                // --- Show or hide Ventas chart depending on selection ---
+                const ventasContainer = document.getElementById('ventasChart').parentElement;
+
+                if (selectedYear === "All") {
+                    // Only show doughnut when 'All' is selected
+                    ventasContainer.style.display = 'block';
+                    const years = Array.from(totalsByYear.entries()).sort((a, b) => b[0] - a[0]);
+                    ventasChart.data.labels = years.map(i => i[0]);
+                    ventasChart.data.datasets[0].data = years.map(i => i[1]);
+                    ventasChart.data.datasets[0].backgroundColor = years.map((_, i) => `hsl(${i * 60 % 360},70%,60%)`);
+                    ventasChart.update();
+                } else {
+                    ventasContainer.style.display = 'none';
+                }
+            }
         }
     </script>
 
@@ -415,8 +390,6 @@
         });
 
     </script>
-
-
 
     <!-- Bootstrap JS CDN (optional, for components requiring JS) -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
