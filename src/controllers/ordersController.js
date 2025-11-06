@@ -82,6 +82,10 @@ class OrdersController {
         ]);
         return result;
     }
+
+    async editOrder(id, updatedData) {
+        return await Order.findByIdAndUpdate(id, updatedData, { new: true });
+    }
 }
 
 module.exports = OrdersController;
