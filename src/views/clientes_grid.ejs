@@ -235,13 +235,121 @@
               { field: "createdAt", headerName: "Ultima Compra", sortable: true, sort: 'desc', width: 150, valueFormatter: dateformatter },
 
             ];
-
+            
+            const cliente = params.data.nombre;
             const childGridOptions = {
               columnDefs: childColumnDefs,
               theme: agGrid.themeBalham.withPart(agGrid.colorSchemeLightCold),
               pagination: true,
               rowSelection: { mode: 'singleRow', checkboxes: false },
               //defaultColDef: { resizable: true, sortable: true, filter: true },
+
+              onCellDoubleClicked: params => {
+                const modalId = 'pedidoEditModal';
+                let modal = document.getElementById(modalId);
+                if (modal) modal.remove(); // remove previous instance
+
+                modal = document.createElement('div');
+                modal.id = modalId;
+                modal.style.position = 'fixed';
+                modal.style.left = '0';
+                modal.style.top = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.display = 'flex';
+                modal.style.alignItems = 'center';
+                modal.style.justifyContent = 'center';
+                modal.style.background = 'rgba(0,0,0,0.4)';
+                modal.style.backdropFilter = 'blur(4px)';
+
+                modal.innerHTML = `
+                  <div style="background:#fff; border-radius:6px; width:480px; max-width:95%; padding:20px; box-shadow:0 6px 18px rgba(0,0,0,0.2);">
+                    <h5 style="margin:0 0 12px 0;">Editar pedido</h5>
+                    <form id="pedidoEditForm">
+              
+                      <input type="hidden" id="_id" value="${params.data._id}" />
+
+                      <div class="mb-3">
+                        <label class="form-label">Producto</label>
+                        <input name="producto" type="text" class="form-control" value="${(params.data.producto || '').replace(/"/g, '&quot;')}" />
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label">Cantidad</label>
+                        <input name="cantidad" type="number" min="1" class="form-control" value="${(params.data.cantidad || '')}" />
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label">Precio</label>
+                        <input name="precio" type="number" min="0" step="0.01" class="form-control" value="${(params.data.precio || '')}" />
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label">Ciclo</label>
+                        <input name="ciclo" type="text" class="form-control" value="${(params.data.ciclo || '').replace(/"/g, '&quot;')}" />
+                      </div>
+
+                      <div style="text-align:right;">
+                        <button type="button" id="cancelEditPedido" class="cancel-btn">Cancelar</button>
+                        <button type="submit" id="saveEditPedido" class="search-btn">Guardar</button>
+                      </div>
+                    </form>
+                  </div>
+                `;
+                document.body.appendChild(modal);
+                document.getElementById('myGrid').style.display = 'none';
+
+                // helper to close and remove modal
+                const closeModal = () => {
+                  document.getElementById('myGrid').style.display = 'block';
+                  modal.remove();
+                };
+
+                // cancel button
+                modal.querySelector('#cancelEditPedido').addEventListener('click', closeModal);
+
+                // submit handler
+                modal.querySelector('#pedidoEditForm').addEventListener('submit', (ev) => {
+                  ev.preventDefault();
+
+                  const form = ev.target;
+                  const formData = {
+                    _id: form._id.value,
+                    producto: form.producto.value.trim(),
+                    cantidad: form.cantidad.value.trim(),
+                    precio: form.precio.value.trim(),
+                    ciclo: form.ciclo.value.trim(),
+                    total: form.cantidad.value.trim() * form.precio.value.trim(),
+                  };
+
+                  // send update to server
+                  fetch(`/pedido/edit/${encodeURIComponent(formData._id)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                  })
+                  .then(res => {
+                    if (!res.ok) throw new Error('Error updating pedido');
+                    return res.json();
+                  })
+                  .then((updated) => {
+                    // refresh grid rows from server (keeps it simple and in sync)
+                    fetch(`/pedidos/pedidos-by-cliente/${encodeURIComponent(cliente || '')}`)
+                    .then(r => r.json())
+                    .then((data) => { childGridApi.setGridOption("rowData", data); });
+                    closeModal();
+                  })
+                  .catch(err => {
+                    console.error(err);
+                    alert('No se pudo actualizar el cliente.');
+                  });
+                });
+
+                // allow closing modal by clicking outside dialog
+                modal.addEventListener('click', (e) => {
+                  if (e.target === modal) closeModal();
+                });
+              }
             };
 
             // create grid
