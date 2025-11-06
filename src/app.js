@@ -112,6 +112,17 @@ app.post('/pedido/register', async (req, res) => {
     }
 });
 
+app.put('/pedido/edit/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updatedData = req.body;
+        const updatedPedido = await controllerOrder.editOrder(id, updatedData);
+        res.status(200).json({ message: 'Pedido actualizado', pedido: updatedData });
+    } catch (error) {
+        res.status(500).json({ error: error.message || 'Internal Server Error' });
+    }
+});
+
 app.get('/pedidos/pedidos-by-cliente/:id', async (req, res) => {
     try {
         const { id } = req.params;
